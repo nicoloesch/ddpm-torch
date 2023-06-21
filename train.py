@@ -183,7 +183,7 @@ def train(rank=0, args=None, temp_dir=""):
 
         # Init Logger
         wandb_run = wandb.init(project='ddpm-torch', entity='nicoloesch', config=train_configs,
-                               name=f'DDPM_{str(timestamp)}')
+                               name=f'DDPM_{args.pid}_{str(timestamp)}')
 
     trainer = Trainer(
         model=model,
@@ -291,6 +291,7 @@ def main():
     parser.add_argument("--rigid-launch", action="store_true", help="whether to use torch multiprocessing spawn")
     parser.add_argument("--num-gpus", default=1, type=int, help="number of gpus for distributed training")
     parser.add_argument("--dry-run", action="store_true", help="test-run till the first model update completes")
+    parser.add_argument("--pid", default=0, help='Process ID for Logging')
 
     args = parser.parse_args()
 
