@@ -212,7 +212,10 @@ class Trainer:
             results = dict()
             if isinstance(self.sampler, DistributedSampler):
                 self.sampler.set_epoch(e)
-            with tqdm(self.trainloader, desc=f"{e+1}/{self.epochs} epochs", disable=not self.is_leader) as t:
+            with tqdm(self.trainloader,
+                      desc=f"{e+1}/{self.epochs} epochs",
+                      disable=not self.is_leader,
+                      position=0) as t:
                 for i, x in enumerate(t):
                     if isinstance(x, (list, tuple)):
                         x = x[0]  # exclude labels; unconditional model
