@@ -72,9 +72,10 @@ def to_wandb(tensor: torch.Tensor, rows: int, caption: Optional[str] = None):
     if hasattr(tensor, "requires_grad") and tensor.requires_grad:
         tensor = tensor.detach()  # type: ignore
 
-    data = torchvision.utils.make_grid(tensor.mT, normalize=True, nrow=rows, value_range=(-1, 1))
+    data = torchvision.utils.make_grid(tensor, normalize=True, nrow=rows, value_range=(-1, 1))
+    # Add 0.5 after unnormalizing to [0, 255] to round to nearest integer
     image = Image.fromarray(
-        data.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy())
+        data.mul(255).add_(0.5).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy())
 
     return wandb.Image(image, caption=caption)
 
@@ -142,8 +143,8 @@ class Trainer:
         self.stats = RunningStatistics(loss=None)
 
         if self.is_leader:
-            self.fid_2048 = FrechetInceptionDistance(feature=2048)
-            self.fid_64 = FrechetInceptionDistance(feature=64)
+            self.fid_2048 = FrechetInceptionDistance(feature=2048, normalize=True)
+            self.fid_64 = FrechetInceptionDistance(feature=64, normalize=True)
 
     @property
     def timesteps(self):
@@ -222,8 +223,9 @@ class Trainer:
                     if self.dry_run and not global_steps % self.num_accum:
                         break
                     if self.is_leader:
-                        self.fid_64.update(x, real=True)
-                        self.fid_2048.update(x, real=True)
+                        # Normalise to [0,1]
+                        self.fid_64.update(x.add(1).mul(0.5), real=True)
+                        self.fid_2048.update(x.add(1).mul(0.5), real=True)
 
             if not (e + 1) % self.image_intv and self.num_save_images and image_dir:
                 self.model.eval()
@@ -232,11 +234,11 @@ class Trainer:
                 if self.is_leader:
                     save_image(x, os.path.join(image_dir, f"{e + 1}.jpg"), nrow=nrow)
                     wandb_img = to_wandb(x, rows=nrow, caption='DDPM')
-
                     wandb.log('Samples', wandb_img)
-
-                    self.fid_64.update(x, real=False)
-                    self.fid_2048.update(x, real=False)
+                    
+                    # Normalise to [0,1]
+                    self.fid_64.update(x.add(1).mul(0.5), real=False)
+                    self.fid_2048.update(x.add(1).mul(0.5), real=False)
 
             if not (e + 1) % self.chkpt_intv and chkpt_path:
                 self.model.eval()
