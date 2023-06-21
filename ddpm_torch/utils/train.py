@@ -254,9 +254,10 @@ class Trainer:
         if self.is_leader:
             fid_64 = self.fid_64.compute()
             fid_2048 = self.fid_2048.compute()
-
+            epoch_loss = self.current_stats.get('loss')
             wandb.log({'FID64': fid_64,
-                       'FID2048': fid_2048})
+                       'FID2048': fid_2048,
+                       'loss_epoch': epoch_loss})
 
     @property
     def trainees(self):
