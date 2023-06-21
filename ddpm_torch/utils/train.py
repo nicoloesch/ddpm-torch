@@ -220,6 +220,8 @@ class Trainer:
                     self.step(x.to(self.device), global_steps=global_steps)
                     t.set_postfix(self.current_stats)
                     results.update(self.current_stats)
+                    step_loss = self.current_stats.get('loss')
+                    wandb.log({'loss_step': step_loss})
                     if self.dry_run and not global_steps % self.num_accum:
                         break
                     if self.is_leader:
@@ -235,7 +237,7 @@ class Trainer:
                     save_image(x, os.path.join(image_dir, f"{e + 1}.jpg"), nrow=nrow)
                     wandb_img = to_wandb(x, rows=nrow, caption='DDPM')
                     wandb.log('Samples', wandb_img)
-                    
+
                     # Normalise to [0,1]
                     self.fid_64.update(x.add(1).mul(0.5), real=False)
                     self.fid_2048.update(x.add(1).mul(0.5), real=False)
