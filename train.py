@@ -13,6 +13,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed.elastic.multiprocessing import errors
 
 import wandb
+from collections import ChainMap
 
 
 def train(rank=0, args=None, temp_dir=""):
@@ -171,6 +172,12 @@ def train(rank=0, args=None, temp_dir=""):
             "denoise": model_configs,
             "diffusion": diffusion_configs
         }
+        hp_flat = dict(ChainMap(*[{
+            "dataset": dataset,
+            "seed": seed,
+            "use_ema": args.use_ema,
+            "ema_decay": args.ema_decay,
+            "num_accum": args.num_accum}, train_configs, model_configs, diffusion_configs]))
         timestamp = datetime.now().strftime("%Y-%m-%dT%H%M%S%f")
 
         if not os.path.exists(chkpt_dir):
@@ -182,7 +189,7 @@ def train(rank=0, args=None, temp_dir=""):
             os.makedirs(image_dir)
 
         # Init Logger
-        wandb_run = wandb.init(project=f'ddpm-torch_{dataset}', entity='nicoloesch', config=train_configs,
+        wandb_run = wandb.init(project=f'ddpm-torch_{dataset}', entity='nicoloesch', config=hp_flat,
                                name=f'DDPM_{args.pid}_{str(timestamp)}')
 
     trainer = Trainer(
