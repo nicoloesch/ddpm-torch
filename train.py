@@ -12,6 +12,8 @@ import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed.elastic.multiprocessing import errors
 
+import wandb
+
 
 def train(rank=0, args=None, temp_dir=""):
     distributed = args.distributed
@@ -178,6 +180,10 @@ def train(rank=0, args=None, temp_dir=""):
             json.dump(hps, f, indent=2)
         if not os.path.exists(image_dir):
             os.makedirs(image_dir)
+
+        # Init Logger
+        wandb_run = wandb.init(project='ddpm-torch', entity='nicoloesch', config=train_configs,
+                               name=f'DDPM_{str(timestamp)}')
 
     trainer = Trainer(
         model=model,

@@ -11,6 +11,9 @@ import weakref
 from tqdm import tqdm
 from functools import partial
 from contextlib import nullcontext
+from torchmetrics.image.fid import FrechetInceptionDistance
+import wandb
+from typing import Optional
 
 
 class DummyScheduler:
@@ -59,6 +62,21 @@ class RunningStatistics:
 
 
 save_image = partial(_save_image, normalize=True, value_range=(-1., 1.))
+
+
+def to_wandb(tensor: torch.Tensor, rows: int, caption: Optional[str] = None):
+    r"""Instead of having a 2x8 grid, we have a 4x4 grid in the logging"""
+    import torchvision
+    from PIL import Image
+
+    if hasattr(tensor, "requires_grad") and tensor.requires_grad:
+        tensor = tensor.detach()  # type: ignore
+
+    data = torchvision.utils.make_grid(tensor.mT, normalize=True, nrow=rows, value_range=(-1, 1))
+    image = Image.fromarray(
+        data.mul(255).clamp(0, 255).byte().permute(1, 2, 0).cpu().numpy())
+
+    return wandb.Image(image, caption=caption)
 
 
 class Trainer:
@@ -122,6 +140,10 @@ class Trainer:
             self.ema = nullcontext()
 
         self.stats = RunningStatistics(loss=None)
+
+        if self.is_leader:
+            self.fid_2048 = FrechetInceptionDistance(feature=2048)
+            self.fid_64 = FrechetInceptionDistance(feature=64)
 
     @property
     def timesteps(self):
@@ -199,12 +221,22 @@ class Trainer:
                     results.update(self.current_stats)
                     if self.dry_run and not global_steps % self.num_accum:
                         break
+                    if self.is_leader:
+                        self.fid_64.update(x, real=True)
+                        self.fid_2048.update(x, real=True)
 
             if not (e + 1) % self.image_intv and self.num_save_images and image_dir:
                 self.model.eval()
                 x = self.sample_fn(sample_size=self.num_save_images, sample_seed=self.sample_seed).cpu()
+
                 if self.is_leader:
                     save_image(x, os.path.join(image_dir, f"{e + 1}.jpg"), nrow=nrow)
+                    wandb_img = to_wandb(x, rows=nrow, caption='DDPM')
+
+                    wandb.log('Samples', wandb_img)
+
+                    self.fid_64.update(x, real=False)
+                    self.fid_2048.update(x, real=False)
 
             if not (e + 1) % self.chkpt_intv and chkpt_path:
                 self.model.eval()
@@ -218,6 +250,13 @@ class Trainer:
 
             if self.distributed:
                 dist.barrier()  # synchronize all processes here
+
+        if self.is_leader:
+            fid_64 = self.fid_64.compute()
+            fid_2048 = self.fid_2048.compute()
+
+            wandb.log({'FID64': fid_64,
+                       'FID2048': fid_2048})
 
     @property
     def trainees(self):
