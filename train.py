@@ -182,7 +182,7 @@ def train(rank=0, args=None, temp_dir=""):
             os.makedirs(image_dir)
 
         # Init Logger
-        wandb_run = wandb.init(project='ddpm-torch', entity='nicoloesch', config=train_configs,
+        wandb_run = wandb.init(project=f'ddpm-torch_{dataset}', entity='nicoloesch', config=train_configs,
                                name=f'DDPM_{args.pid}_{str(timestamp)}')
 
     trainer = Trainer(
