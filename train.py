@@ -270,7 +270,7 @@ def main():
     parser.add_argument("--chkpt-dir", default="./chkpts", type=str)
     parser.add_argument("--chkpt-name", default="", type=str)
     parser.add_argument("--chkpt-intv", default=100, type=int, help="frequency of saving a checkpoint")
-    parser.add_argument("--seed", default=1234, type=int, help="random seed")
+    parser.add_argument("--seed", default=123, type=int, help="random seed")
     parser.add_argument("--resume", action="store_true", help="to resume training from a checkpoint")
     parser.add_argument("--chkpt-path", default="", type=str, help="checkpoint path used to resume training")
     parser.add_argument("--eval", action="store_true", help="whether to evaluate fid during training")
