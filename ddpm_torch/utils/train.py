@@ -223,13 +223,13 @@ class Trainer:
                     self.step(x.to(self.device), global_steps=global_steps)
                     t.set_postfix(self.current_stats)
                     results.update(self.current_stats)
-                    wandb.log(**self.current_stats)
                     if self.dry_run and not global_steps % self.num_accum:
                         break
                     if self.is_leader:
                         # Normalise to [0,1]
                         self.fid_64.update(x.add(1).mul(0.5), real=True)
                         self.fid_2048.update(x.add(1).mul(0.5), real=True)
+                        wandb.log(self.current_stats, step=global_steps)
 
             if not (e + 1) % self.image_intv and self.num_save_images and image_dir:
                 self.model.eval()
