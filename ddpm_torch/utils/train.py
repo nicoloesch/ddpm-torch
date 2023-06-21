@@ -220,8 +220,7 @@ class Trainer:
                     self.step(x.to(self.device), global_steps=global_steps)
                     t.set_postfix(self.current_stats)
                     results.update(self.current_stats)
-                    step_loss = self.current_stats.get('loss')
-                    wandb.log({'loss_step': step_loss})
+                    wandb.log(**self.current_stats)
                     if self.dry_run and not global_steps % self.num_accum:
                         break
                     if self.is_leader:
@@ -258,10 +257,8 @@ class Trainer:
         if self.is_leader:
             fid_64 = self.fid_64.compute()
             fid_2048 = self.fid_2048.compute()
-            epoch_loss = self.current_stats.get('loss')
             wandb.log({'FID64': fid_64,
-                       'FID2048': fid_2048,
-                       'loss_epoch': epoch_loss})
+                       'FID2048': fid_2048})
 
     @property
     def trainees(self):
