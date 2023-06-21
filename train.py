@@ -294,25 +294,23 @@ def main():
     parser.add_argument("--pid", default=0, help='Process ID for Logging')
 
     args = parser.parse_args()
-    print(args)
 
-    if False:
-        if args.distributed and args.rigid_launch:
-            mp.set_start_method("spawn")
-            with tempfile.TemporaryDirectory() as temp_dir:
-                mp.spawn(train, args=(args, temp_dir), nprocs=args.num_gpus)
-        else:
-            """
-            As opposed to the case of rigid launch, distributed training now:
-            (*: elastic launch only; **: Slurm srun only)
-             *1. handles failures by restarting all the workers 
-             *2.1 assigns RANK and WORLD_SIZE automatically
-            **2.2 sets MASTER_ADDR & MASTER_PORT manually beforehand via environment variables
-             *3. allows for number of nodes change
-              4. uses TCP initialization by default
-            **5. supports multi-node training
-            """
-            train(args=args)
+    if args.distributed and args.rigid_launch:
+        mp.set_start_method("spawn")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mp.spawn(train, args=(args, temp_dir), nprocs=args.num_gpus)
+    else:
+        """
+        As opposed to the case of rigid launch, distributed training now:
+        (*: elastic launch only; **: Slurm srun only)
+         *1. handles failures by restarting all the workers 
+         *2.1 assigns RANK and WORLD_SIZE automatically
+        **2.2 sets MASTER_ADDR & MASTER_PORT manually beforehand via environment variables
+         *3. allows for number of nodes change
+          4. uses TCP initialization by default
+        **5. supports multi-node training
+        """
+        train(args=args)
 
 
 if __name__ == "__main__":
