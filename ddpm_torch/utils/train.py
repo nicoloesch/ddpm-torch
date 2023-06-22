@@ -176,6 +176,9 @@ class Trainer:
         if self.distributed:
             dist.reduce(loss, dst=0, op=dist.ReduceOp.SUM)  # synchronize losses
             loss.div_(self.world_size)
+
+        if self.is_leader:
+            wandb.log({'loss/train_step': loss}, step=global_steps)
         self.stats.update(x.shape[0], loss=loss.item() * x.shape[0])
 
     def sample_fn(self, sample_size=None, noise=None, diffusion=None, sample_seed=None):
@@ -229,7 +232,10 @@ class Trainer:
                         # Normalise to [0,1]
                         self.fid_64.update(x.add(1).mul(0.5), real=True)
                         self.fid_2048.update(x.add(1).mul(0.5), real=True)
-                        wandb.log(self.current_stats, step=global_steps)
+
+            # Log epoch metrics
+            epoch_loss = self.current_stats.get('loss')
+            wandb.log({'loss/train_epoch': epoch_loss}, step=global_steps)
 
             if not (e + 1) % self.image_intv and self.num_save_images and image_dir:
                 self.model.eval()
