@@ -263,11 +263,11 @@ class Trainer:
             if self.distributed:
                 dist.barrier()  # synchronize all processes here
 
-        if self.is_leader:
-            fid_64 = self.fid_64.compute()
-            fid_2048 = self.fid_2048.compute()
-            wandb.log({'FID64': fid_64,
-                       'FID2048': fid_2048})
+            if self.is_leader:
+                fid_64 = self.fid_64.compute().item()
+                fid_2048 = self.fid_2048.compute().item()
+                wandb.log({'FID/epoch_64': fid_64,
+                           'FID/epoch_2048': fid_2048}, step=global_steps)
 
     @property
     def trainees(self):
