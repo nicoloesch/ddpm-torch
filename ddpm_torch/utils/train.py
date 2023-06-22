@@ -250,6 +250,12 @@ class Trainer:
                     self.fid_64.update(x.add(1).mul(0.5), real=False)
                     self.fid_2048.update(x.add(1).mul(0.5), real=False)
 
+                    # Log immediately
+                    fid_64 = self.fid_64.compute().item()
+                    fid_2048 = self.fid_2048.compute().item()
+                    wandb.log({'FID/epoch_64': fid_64,
+                               'FID/epoch_2048': fid_2048}, step=global_steps)
+
             if not (e + 1) % self.chkpt_intv and chkpt_path:
                 self.model.eval()
                 if evaluator is not None:
@@ -263,11 +269,6 @@ class Trainer:
             if self.distributed:
                 dist.barrier()  # synchronize all processes here
 
-            if self.is_leader:
-                fid_64 = self.fid_64.compute().item()
-                fid_2048 = self.fid_2048.compute().item()
-                wandb.log({'FID/epoch_64': fid_64,
-                           'FID/epoch_2048': fid_2048}, step=global_steps)
 
     @property
     def trainees(self):
