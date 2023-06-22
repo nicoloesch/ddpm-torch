@@ -244,7 +244,7 @@ class Trainer:
                 if self.is_leader:
                     save_image(x, os.path.join(image_dir, f"{e + 1}.jpg"), nrow=nrow)
                     wandb_img = to_wandb(x, rows=nrow, caption='DDPM')
-                    wandb.log({'Samples', wandb_img})
+                    wandb.log({'Samples': wandb_img})
 
                     # Normalise to [0,1]
                     self.fid_64.update(x.add(1).mul(0.5), real=False)
