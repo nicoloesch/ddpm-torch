@@ -222,6 +222,7 @@ class Trainer:
                 for i, x in enumerate(t):
                     if isinstance(x, (list, tuple)):
                         x = x[0]  # exclude labels; unconditional model
+                    input_tensor = x.clone()  # In case x is getting modified
                     global_steps += 1
                     self.step(x.to(self.device), global_steps=global_steps)
                     t.set_postfix(self.current_stats)
@@ -230,8 +231,8 @@ class Trainer:
                         break
                     if self.is_leader:
                         # Normalise to [0,1]
-                        self.fid_64.update(x.add(1).mul(0.5), real=True)
-                        self.fid_2048.update(x.add(1).mul(0.5), real=True)
+                        self.fid_64.update(input_tensor.add(1).mul(0.5), real=True)
+                        self.fid_2048.update(input_tensor.add(1).mul(0.5), real=True)
 
             # Log epoch metrics
             epoch_loss = self.current_stats.get('loss')
@@ -239,22 +240,22 @@ class Trainer:
 
             if not (e + 1) % self.image_intv and self.num_save_images and image_dir:
                 self.model.eval()
-                x = self.sample_fn(sample_size=self.num_save_images, sample_seed=self.sample_seed).cpu()
+                sample = self.sample_fn(sample_size=self.num_save_images, sample_seed=self.sample_seed).cpu()
 
                 if self.is_leader:
-                    save_image(x, os.path.join(image_dir, f"{e + 1}.jpg"), nrow=nrow)
-                    wandb_img = to_wandb(x, rows=nrow, caption='DDPM')
+                    #save_image(sample, os.path.join(image_dir, f"{e + 1}.jpg"), nrow=nrow)
+                    wandb_img = to_wandb(sample, rows=nrow, caption='DDPM')
                     wandb.log({'Samples': wandb_img})
 
                     # Normalise to [0,1]
-                    self.fid_64.update(x.add(1).mul(0.5), real=False)
-                    self.fid_2048.update(x.add(1).mul(0.5), real=False)
+                    self.fid_64.update(sample.add(1).mul(0.5), real=False)
+                    self.fid_2048.update(sample.add(1).mul(0.5), real=False)
 
                     # Log immediately
-                    fid_64 = self.fid_64.compute().item()
-                    fid_2048 = self.fid_2048.compute().item()
+                    fid_64 = self.fid_64.compute()
+                    fid_2048 = self.fid_2048.compute()
                     wandb.log({'FID/epoch_64': fid_64,
-                               'FID/epoch_2048': fid_2048}, step=global_steps)
+                               'FID/epoch_2048': fid_2048})
 
             if not (e + 1) % self.chkpt_intv and chkpt_path:
                 self.model.eval()
