@@ -148,7 +148,7 @@ class CelebAHQ(tvds.VisionDataset):
     created by Karras et al. (2018) [1]
     [1] Karras, Tero, et al. "Progressive Growing of GANs for Improved Quality, Stability, and Variation." International Conference on Learning Representations. 2018.
     """  # noqa
-    base_folder = "celeba_hq"
+    base_folder = "celebahq-256"
     resolution = (256, 256)
     channels = 3
     transform = transforms.Compose([
@@ -167,14 +167,14 @@ class CelebAHQ(tvds.VisionDataset):
         super().__init__(root, transform=transform or self._transform)
         self.filename = sorted([
             fname
-            for fname in os.listdir(os.path.join(root, self.base_folder, "img_celeba_hq"))
-            if fname.endswith(".png")
+            for fname in os.listdir(os.path.join(root, self.base_folder, "train"))
+            if fname.endswith(".jpg")
         ], key=lambda name: int(name[:-4].zfill(5)))
         np.random.RandomState(123).shuffle(self.filename)  # legacy order used by ProGAN
 
     def __getitem__(self, index):
         im = PIL.Image.open(os.path.join(  # noqa
-            self.root, self.base_folder, "img_celeba_hq", self.filename[index]))
+            self.root, self.base_folder, "train", self.filename[index]))
 
         if self.transform is not None:
             im = self.transform(im)
